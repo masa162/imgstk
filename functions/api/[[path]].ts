@@ -289,6 +289,44 @@ app.post('/batches/:id/markdown', async (c) => {
   }
 });
 
+/**
+ * DELETE /api/images/:filename
+ * Delete a single image from R2 and D1
+ */
+app.delete('/images/:filename', async (c) => {
+  try {
+    const filename = c.req.param('filename');
+    const db = c.env.DB;
+    const r2 = c.env.R2_BUCKET;
+
+    // Get image info before deletion
+    const image = await db.prepare('SELECT * FROM images WHERE filename = ?')
+      .bind(filename)
+      .first<Image>();
+
+    if (!image) {
+      return c.json({ error: 'Image not found' }, 404);
+    }
+
+    // Delete from R2
+    await r2.delete(filename);
+
+    // Delete from D1
+    await db.prepare('DELETE FROM images WHERE filename = ?')
+      .bind(filename)
+      .run();
+
+    return c.json({
+      deleted: filename,
+      batch_id: image.batch_id
+    });
+
+  } catch (error) {
+    console.error('Delete image error:', error);
+    return c.json({ error: 'Failed to delete image', details: String(error) }, 500);
+  }
+});
+
 // Export handler for Pages Functions
 // Using handle() adapter to bridge Hono and Cloudflare Pages Function signatures
 export const onRequest = handle(app);

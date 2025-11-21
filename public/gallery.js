@@ -4,6 +4,9 @@
 
 const API_BASE = '/api';
 
+// Track expanded batches
+const expandedBatches = new Set();
+
 // DOM Elements
 const loading = document.getElementById('loading');
 const batchList = document.getElementById('batchList');
@@ -100,7 +103,16 @@ function renderBatches(batches) {
         </div>
       </div>
 
-      <div class="flex space-x-2">
+      <div class="flex space-x-2 mb-3">
+        <button
+          class="toggle-images-btn flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-200 text-sm flex items-center justify-center"
+          data-batch-id="${batch.id}"
+        >
+          <svg class="inline h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+          </svg>
+          画像を表示 (${batch.image_count}枚)
+        </button>
         <button
           class="markdown-btn flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 text-sm"
           data-batch-id="${batch.id}"
@@ -108,12 +120,21 @@ function renderBatches(batches) {
           Markdown生成
         </button>
       </div>
+
+      <!-- Image Grid Container (Hidden by default) -->
+      <div id="images-${batch.id}" class="hidden mt-4">
+        <!-- Images will be loaded here -->
+      </div>
     `;
 
     batchList.appendChild(card);
   });
 
   // Attach event listeners
+  document.querySelectorAll('.toggle-images-btn').forEach(btn => {
+    btn.addEventListener('click', () => toggleImageView(btn.dataset.batchId, btn));
+  });
+
   document.querySelectorAll('.markdown-btn').forEach(btn => {
     btn.addEventListener('click', () => generateMarkdown(btn.dataset.batchId));
   });
@@ -167,6 +188,194 @@ async function deleteBatch(batchId, batchTitle) {
 
   } catch (error) {
     console.error('Delete batch error:', error);
+    alert('削除に失敗しました: ' + error.message);
+  }
+}
+
+// Toggle image view
+async function toggleImageView(batchId, buttonElement) {
+  const container = document.getElementById(`images-${batchId}`);
+  const isExpanded = expandedBatches.has(batchId);
+
+  if (isExpanded) {
+    // Collapse
+    container.classList.add('hidden');
+    expandedBatches.delete(batchId);
+    buttonElement.innerHTML = `
+      <svg class="inline h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+      </svg>
+      画像を表示 (${container.dataset.imageCount || ''}枚)
+    `;
+  } else {
+    // Expand
+    buttonElement.disabled = true;
+    const originalHTML = buttonElement.innerHTML;
+    buttonElement.textContent = '読み込み中...';
+
+    try {
+      await loadBatchImages(batchId);
+      container.classList.remove('hidden');
+      expandedBatches.add(batchId);
+      buttonElement.innerHTML = `
+        <svg class="inline h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+        </svg>
+        画像を非表示
+      `;
+    } catch (error) {
+      alert('画像の読み込みに失敗しました: ' + error.message);
+      buttonElement.innerHTML = originalHTML;
+    } finally {
+      buttonElement.disabled = false;
+    }
+  }
+}
+
+// Load batch images from API
+async function loadBatchImages(batchId) {
+  const response = await fetch(`${API_BASE}/batches/${batchId}`, {
+    credentials: 'include'
+  });
+
+  if (!response.ok) {
+    throw new Error('画像の取得に失敗しました');
+  }
+
+  const data = await response.json();
+  renderImageGrid(data.images, batchId);
+}
+
+// Render image grid
+function renderImageGrid(images, batchId) {
+  const container = document.getElementById(`images-${batchId}`);
+  container.dataset.imageCount = images.length;
+
+  container.innerHTML = `
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 p-4 bg-gray-50 rounded">
+      ${images.map(img => `
+        <div class="image-card bg-white rounded shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-1" data-filename="${img.filename}">
+          <div class="relative aspect-square">
+            <img
+              src="${img.url}"
+              alt="${img.filename}"
+              class="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+              loading="lazy"
+              onclick="window.open('${img.url}', '_blank')"
+              title="クリックして新しいタブで開く"
+              onerror="this.onerror=null; this.classList.add('opacity-50'); this.parentElement.innerHTML='<div class=&quot;w-full h-full flex items-center justify-center bg-gray-200&quot;><span class=&quot;text-gray-500 text-xs&quot;>読み込みエラー</span></div>';"
+            />
+          </div>
+          <div class="p-2 space-y-1">
+            <div class="text-xs font-mono text-gray-700 truncate" title="${img.filename}">
+              ${img.filename}
+            </div>
+            <div class="flex gap-1">
+              <button
+                class="copy-url-btn flex-1 text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 py-1 px-2 rounded transition-colors"
+                data-url="${img.url}"
+                title="URLをコピー"
+              >
+                📎 Copy
+              </button>
+              <button
+                class="delete-image-btn text-xs bg-red-50 text-red-600 hover:bg-red-100 py-1 px-2 rounded transition-colors"
+                data-filename="${img.filename}"
+                data-batch-id="${batchId}"
+                title="画像を削除"
+              >
+                🗑️
+              </button>
+            </div>
+            <div class="text-xs text-gray-500">
+              ${(img.bytes / 1024).toFixed(1)} KB
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  // Attach event listeners to new buttons
+  container.querySelectorAll('.copy-url-btn').forEach(btn => {
+    btn.addEventListener('click', () => copyImageURL(btn.dataset.url, btn));
+  });
+
+  container.querySelectorAll('.delete-image-btn').forEach(btn => {
+    btn.addEventListener('click', () => deleteImage(btn.dataset.filename, btn.dataset.batchId));
+  });
+}
+
+// Copy image URL to clipboard
+async function copyImageURL(url, buttonElement) {
+  try {
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(url);
+    } else {
+      // Fallback for older browsers
+      const input = document.createElement('input');
+      input.value = url;
+      input.style.position = 'fixed';
+      input.style.opacity = '0';
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+    }
+
+    const originalText = buttonElement.textContent;
+    buttonElement.textContent = '✓ Copied!';
+    buttonElement.classList.add('bg-green-100', 'text-green-700');
+    buttonElement.classList.remove('bg-blue-50', 'text-blue-600');
+
+    setTimeout(() => {
+      buttonElement.textContent = originalText;
+      buttonElement.classList.remove('bg-green-100', 'text-green-700');
+      buttonElement.classList.add('bg-blue-50', 'text-blue-600');
+    }, 2000);
+  } catch (error) {
+    console.error('Copy error:', error);
+    alert('クリップボードへのコピーに失敗しました');
+  }
+}
+
+// Delete single image
+async function deleteImage(filename, batchId) {
+  const confirmed = confirm(
+    `画像「${filename}」を削除しますか？\n\nこの操作は取り消せません。R2から完全に削除されます。`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const response = await fetch(`${API_BASE}/images/${filename}`, {
+      credentials: 'include',
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      throw new Error('削除に失敗しました');
+    }
+
+    // Remove from UI with animation
+    const card = document.querySelector(`[data-filename="${filename}"]`);
+    card.style.opacity = '0';
+    card.style.transform = 'scale(0.8)';
+    card.style.transition = 'all 0.3s ease';
+
+    setTimeout(() => {
+      card.remove();
+
+      // Check if grid is now empty
+      const container = document.getElementById(`images-${batchId}`);
+      const remainingImages = container.querySelectorAll('.image-card');
+      if (remainingImages.length === 0) {
+        container.innerHTML = '<div class="p-8 text-center"><p class="text-gray-500">このバッチの画像は全て削除されました</p></div>';
+      }
+    }, 300);
+
+  } catch (error) {
+    console.error('Delete image error:', error);
     alert('削除に失敗しました: ' + error.message);
   }
 }
