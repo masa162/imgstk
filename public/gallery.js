@@ -4,6 +4,34 @@
 
 const API_BASE = '/api';
 
+/**
+ * Japanese error messages for error codes
+ */
+const ERROR_MESSAGES = {
+  'INVALID_REQUEST': 'リクエストが無効です。入力内容を確認してください。',
+  'TOO_MANY_FILES': 'アップロードできるのは最大500枚までです。',
+  'FILE_TYPE_INVALID': '画像ファイルのみアップロード可能です。',
+  'FILE_TOO_LARGE': 'ファイルサイズが大きすぎます。',
+  'INVALID_FILENAME': 'ファイル名が無効です。',
+  'BATCH_NOT_FOUND': 'バッチが見つかりませんでした。',
+  'IMAGE_NOT_FOUND': '画像が見つかりませんでした。',
+  'UPLOAD_FAILED': 'アップロードに失敗しました。もう一度お試しください。',
+  'DELETE_FAILED': '削除に失敗しました。',
+  'DATABASE_ERROR': 'データベースエラーが発生しました。',
+  'STORAGE_ERROR': 'ストレージエラーが発生しました。',
+  'INTERNAL_ERROR': 'サーバーエラーが発生しました。',
+};
+
+/**
+ * Get Japanese error message from error code
+ */
+function getErrorMessage(errorData) {
+  if (errorData.code && ERROR_MESSAGES[errorData.code]) {
+    return ERROR_MESSAGES[errorData.code];
+  }
+  return errorData.error || 'エラーが発生しました。';
+}
+
 // Track expanded batches
 const expandedBatches = new Set();
 
@@ -32,7 +60,8 @@ async function loadBatches() {
     const response = await fetch(`${API_BASE}/batches`, { credentials: 'include' });
 
     if (!response.ok) {
-      throw new Error('バッチの読み込みに失敗しました');
+      const errorData = await response.json();
+      throw new Error(getErrorMessage(errorData));
     }
 
     const data = await response.json();
@@ -152,7 +181,8 @@ async function generateMarkdown(batchId) {
     });
 
     if (!response.ok) {
-      throw new Error('Markdown生成に失敗しました');
+      const errorData = await response.json();
+      throw new Error(getErrorMessage(errorData));
     }
 
     const data = await response.json();
@@ -161,7 +191,7 @@ async function generateMarkdown(batchId) {
 
   } catch (error) {
     console.error('Generate markdown error:', error);
-    alert('Markdown生成に失敗しました: ' + error.message);
+    alert(error.message);
   }
 }
 
@@ -177,7 +207,8 @@ async function deleteBatch(batchId, batchTitle) {
     });
 
     if (!response.ok) {
-      throw new Error('削除に失敗しました');
+      const errorData = await response.json();
+      throw new Error(getErrorMessage(errorData));
     }
 
     const data = await response.json();
@@ -188,7 +219,7 @@ async function deleteBatch(batchId, batchTitle) {
 
   } catch (error) {
     console.error('Delete batch error:', error);
-    alert('削除に失敗しました: ' + error.message);
+    alert(error.message);
   }
 }
 
@@ -239,7 +270,8 @@ async function loadBatchImages(batchId) {
   });
 
   if (!response.ok) {
-    throw new Error('画像の取得に失敗しました');
+    const errorData = await response.json();
+    throw new Error(getErrorMessage(errorData));
   }
 
   const data = await response.json();
@@ -354,7 +386,8 @@ async function deleteImage(filename, batchId) {
     });
 
     if (!response.ok) {
-      throw new Error('削除に失敗しました');
+      const errorData = await response.json();
+      throw new Error(getErrorMessage(errorData));
     }
 
     // Remove from UI with animation
@@ -376,7 +409,7 @@ async function deleteImage(filename, batchId) {
 
   } catch (error) {
     console.error('Delete image error:', error);
-    alert('削除に失敗しました: ' + error.message);
+    alert(error.message);
   }
 }
 

@@ -7,6 +7,7 @@ import { Hono } from 'hono';
 import { handle } from 'hono/cloudflare-pages';
 // import { cors } from 'hono/cors'; // Disabled for Cloudflare Pages compatibility
 import type { Env, UploadRequest, Batch, Image } from '../types';
+import { Errors, getErrorStatus } from '../errors';
 
 const app = new Hono<{ Bindings: Env }>().basePath('/api');
 
@@ -88,11 +89,13 @@ app.post('/upload', async (c) => {
     const { batchTitle, files } = body;
 
     if (!batchTitle || !files || files.length === 0) {
-      return c.json({ error: 'Invalid request' }, 400);
+      const error = Errors.invalidRequest();
+      return c.json(error, getErrorStatus(error.code));
     }
 
     if (files.length > 500) {
-      return c.json({ error: 'Too many files (max 500)' }, 400);
+      const error = Errors.tooManyFiles(500);
+      return c.json(error, getErrorStatus(error.code));
     }
 
     const db = c.env.DB;
@@ -176,7 +179,8 @@ app.post('/upload', async (c) => {
 
   } catch (error) {
     console.error('Upload error:', error);
-    return c.json({ error: 'Upload failed' }, 500);
+    const err = Errors.uploadFailed();
+    return c.json(err, getErrorStatus(err.code));
   }
 });
 
@@ -196,7 +200,8 @@ app.get('/batches', async (c) => {
 
   } catch (error) {
     console.error('List batches error:', error);
-    return c.json({ error: 'Failed to list batches' }, 500);
+    const err = Errors.databaseError();
+    return c.json(err, getErrorStatus(err.code));
   }
 });
 
@@ -212,7 +217,8 @@ app.get('/batches/:id', async (c) => {
     const batch = await db.prepare('SELECT * FROM batches WHERE id = ?').bind(batchId).first();
 
     if (!batch) {
-      return c.json({ error: 'Batch not found' }, 404);
+      const error = Errors.batchNotFound(Number(batchId) || 0);
+      return c.json(error, getErrorStatus(error.code));
     }
 
     const images = await db.prepare('SELECT * FROM images WHERE batch_id = ? ORDER BY id').bind(batchId).all();
@@ -221,7 +227,8 @@ app.get('/batches/:id', async (c) => {
 
   } catch (error) {
     console.error('Get batch error:', error);
-    return c.json({ error: 'Failed to get batch' }, 500);
+    const err = Errors.databaseError();
+    return c.json(err, getErrorStatus(err.code));
   }
 });
 
@@ -239,7 +246,8 @@ app.delete('/batches/:id', async (c) => {
     const images = await db.prepare('SELECT filename FROM images WHERE batch_id = ?').bind(batchId).all();
 
     if (!images.results || images.results.length === 0) {
-      return c.json({ error: 'Batch not found' }, 404);
+      const error = Errors.batchNotFound(Number(batchId) || 0);
+      return c.json(error, getErrorStatus(error.code));
     }
 
     // Delete from R2
@@ -253,7 +261,8 @@ app.delete('/batches/:id', async (c) => {
 
   } catch (error) {
     console.error('Delete batch error:', error);
-    return c.json({ error: 'Failed to delete batch' }, 500);
+    const err = Errors.deleteFailed();
+    return c.json(err, getErrorStatus(err.code));
   }
 });
 
@@ -269,7 +278,8 @@ app.post('/batches/:id/markdown', async (c) => {
     const batch = await db.prepare('SELECT * FROM batches WHERE id = ?').bind(batchId).first<Batch>();
 
     if (!batch) {
-      return c.json({ error: 'Batch not found' }, 404);
+      const error = Errors.batchNotFound(Number(batchId) || 0);
+      return c.json(error, getErrorStatus(error.code));
     }
 
     const images = await db.prepare('SELECT * FROM images WHERE batch_id = ? ORDER BY id').bind(batchId).all();
@@ -285,7 +295,8 @@ app.post('/batches/:id/markdown', async (c) => {
 
   } catch (error) {
     console.error('Generate markdown error:', error);
-    return c.json({ error: 'Failed to generate markdown' }, 500);
+    const err = Errors.databaseError();
+    return c.json(err, getErrorStatus(err.code));
   }
 });
 
@@ -305,7 +316,8 @@ app.delete('/images/:filename', async (c) => {
       .first<Image>();
 
     if (!image) {
-      return c.json({ error: 'Image not found' }, 404);
+      const error = Errors.imageNotFound(filename);
+      return c.json(error, getErrorStatus(error.code));
     }
 
     // Delete from R2
@@ -323,7 +335,8 @@ app.delete('/images/:filename', async (c) => {
 
   } catch (error) {
     console.error('Delete image error:', error);
-    return c.json({ error: 'Failed to delete image' }, 500);
+    const err = Errors.deleteFailed();
+    return c.json(err, getErrorStatus(err.code));
   }
 });
 

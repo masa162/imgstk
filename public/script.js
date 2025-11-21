@@ -5,6 +5,34 @@
 const API_BASE = '/api';
 let selectedFiles = [];
 
+/**
+ * Japanese error messages for error codes
+ */
+const ERROR_MESSAGES = {
+  'INVALID_REQUEST': 'リクエストが無効です。入力内容を確認してください。',
+  'TOO_MANY_FILES': 'アップロードできるのは最大500枚までです。',
+  'FILE_TYPE_INVALID': '画像ファイルのみアップロード可能です。',
+  'FILE_TOO_LARGE': 'ファイルサイズが大きすぎます。',
+  'INVALID_FILENAME': 'ファイル名が無効です。',
+  'BATCH_NOT_FOUND': 'バッチが見つかりませんでした。',
+  'IMAGE_NOT_FOUND': '画像が見つかりませんでした。',
+  'UPLOAD_FAILED': 'アップロードに失敗しました。もう一度お試しください。',
+  'DELETE_FAILED': '削除に失敗しました。',
+  'DATABASE_ERROR': 'データベースエラーが発生しました。',
+  'STORAGE_ERROR': 'ストレージエラーが発生しました。',
+  'INTERNAL_ERROR': 'サーバーエラーが発生しました。',
+};
+
+/**
+ * Get Japanese error message from error code
+ */
+function getErrorMessage(errorData) {
+  if (errorData.code && ERROR_MESSAGES[errorData.code]) {
+    return ERROR_MESSAGES[errorData.code];
+  }
+  return errorData.error || 'エラーが発生しました。';
+}
+
 // DOM Elements
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
@@ -143,7 +171,7 @@ uploadBtn.addEventListener('click', async () => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || 'アップロードに失敗しました');
+      throw new Error(getErrorMessage(errorData));
     }
 
     const result = await response.json();
