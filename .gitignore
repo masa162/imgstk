@@ -4,6 +4,7 @@ package-lock.json
 
 # Wrangler
 .wrangler/
+wrangler.toml
 wrangler.toml.local
 .dev.vars
 

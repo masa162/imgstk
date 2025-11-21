@@ -89,12 +89,18 @@ bucket_name = "imgstk-bucket"
 
 ### Pages Configuration
 
-Edit `wrangler.toml` (root):
+**For GitHub deployment**: Configure in Cloudflare Dashboard (no wrangler.toml needed)
+
+**For local development**: Copy `wrangler.toml.example` to `wrangler.toml`
+```bash
+cp wrangler.toml.example wrangler.toml
+```
+
+The example configuration:
 ```toml
 name = "imgstk-pages"
 compatibility_date = "2024-11-21"
 pages_build_output_dir = "public"
-account_id = "c677241d7d66ff80103bab9f142128ab"
 
 [vars]
 BASIC_AUTH_USER = "mn"
@@ -109,6 +115,8 @@ binding = "DB"
 database_name = "imgstk-db"
 database_id = "56b82fb3-9ec3-4c3e-917c-23e2da347682"
 ```
+
+**Note**: For production deployment via GitHub, configure bindings in Cloudflare Dashboard → Workers & Pages → imgstk-pages → Settings
 
 ## Development
 
