@@ -311,8 +311,18 @@ function renderImageGrid(images, batchId) {
   container.innerHTML = `
     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 p-4 bg-gray-50 rounded">
       ${images.map(img => `
-        <div class="image-card bg-white rounded shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-1" data-filename="${img.filename}">
+        <div class="image-card bg-white rounded shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-1" data-filename="${img.filename}" data-batch-id="${batchId}">
           <div class="relative aspect-square">
+            <!-- Selection Checkbox -->
+            <div class="absolute top-2 left-2 z-10">
+              <input
+                type="checkbox"
+                class="image-checkbox w-5 h-5 cursor-pointer rounded border-2 border-white shadow-lg"
+                data-filename="${img.filename}"
+                data-batch-id="${batchId}"
+                data-url="${img.url}"
+              />
+            </div>
             <img
               src="${img.url}"
               alt="${img.filename}"
@@ -360,6 +370,11 @@ function renderImageGrid(images, batchId) {
 
   container.querySelectorAll('.delete-image-btn').forEach(btn => {
     btn.addEventListener('click', () => deleteImage(btn.dataset.filename, btn.dataset.batchId));
+  });
+
+  // Attach event listeners to checkboxes
+  container.querySelectorAll('.image-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', (e) => handleImageSelection(e.target));
   });
 }
 
@@ -503,3 +518,249 @@ function setupFilters() {
     loadBatches();
   });
 }
+
+/**
+ * Bulk Selection Management
+ */
+
+// Selection state: Map<batchId, Map<filename, imageData>>
+const selectedImages = new Map();
+
+// Toolbar elements
+const selectionToolbar = document.getElementById('selectionToolbar');
+const selectedCountEl = document.getElementById('selectedCount');
+const downloadSelectedBtn = document.getElementById('downloadSelected');
+const deleteSelectedBtn = document.getElementById('deleteSelected');
+const clearSelectionBtn = document.getElementById('clearSelection');
+const zipProgress = document.getElementById('zipProgress');
+const zipProgressBar = document.getElementById('zipProgressBar');
+const zipProgressText = document.getElementById('zipProgressText');
+const zipProgressPercent = document.getElementById('zipProgressPercent');
+
+/**
+ * Handle image checkbox selection
+ */
+function handleImageSelection(checkbox) {
+  const { filename, batchId, url } = checkbox.dataset;
+
+  if (!selectedImages.has(batchId)) {
+    selectedImages.set(batchId, new Map());
+  }
+
+  const batchImages = selectedImages.get(batchId);
+
+  if (checkbox.checked) {
+    batchImages.set(filename, { filename, url, batchId });
+  } else {
+    batchImages.delete(filename);
+    if (batchImages.size === 0) {
+      selectedImages.delete(batchId);
+    }
+  }
+
+  updateSelectionUI();
+}
+
+/**
+ * Update selection toolbar UI
+ */
+function updateSelectionUI() {
+  let totalCount = 0;
+  selectedImages.forEach(batch => {
+    totalCount += batch.size;
+  });
+
+  selectedCountEl.textContent = totalCount;
+
+  if (totalCount > 0) {
+    selectionToolbar.classList.remove('hidden');
+  } else {
+    selectionToolbar.classList.add('hidden');
+  }
+}
+
+/**
+ * Clear all selections
+ */
+clearSelectionBtn.addEventListener('click', () => {
+  selectedImages.clear();
+  document.querySelectorAll('.image-checkbox').forEach(cb => cb.checked = false);
+  updateSelectionUI();
+});
+
+/**
+ * Bulk delete selected images
+ */
+deleteSelectedBtn.addEventListener('click', async () => {
+  let totalCount = 0;
+  selectedImages.forEach(batch => {
+    totalCount += batch.size;
+  });
+
+  const confirmed = confirm(`選択した${totalCount}枚の画像を削除しますか？\n\nこの操作は取り消せません。R2から画像も完全に削除されます。`);
+
+  if (!confirmed) return;
+
+  try {
+    deleteSelectedBtn.disabled = true;
+    deleteSelectedBtn.textContent = '削除中...';
+
+    const deletePromises = [];
+    const imagesToDelete = [];
+
+    selectedImages.forEach((batchImages, batchId) => {
+      batchImages.forEach((imageData, filename) => {
+        imagesToDelete.push({ filename, batchId });
+        deletePromises.push(
+          fetch(`${API_BASE}/images/${filename}`, {
+            credentials: 'include',
+            method: 'DELETE',
+          })
+        );
+      });
+    });
+
+    // Execute all deletes in parallel
+    const results = await Promise.allSettled(deletePromises);
+
+    // Count successes and failures
+    let successCount = 0;
+    let failCount = 0;
+
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled' && result.value.ok) {
+        successCount++;
+        // Remove from UI
+        const { filename } = imagesToDelete[index];
+        const card = document.querySelector(`[data-filename="${filename}"]`);
+        if (card) card.remove();
+      } else {
+        failCount++;
+      }
+    });
+
+    // Clear selections
+    selectedImages.clear();
+    updateSelectionUI();
+
+    // Show result
+    if (failCount > 0) {
+      alert(`${successCount}枚削除しました。\n${failCount}枚の削除に失敗しました。`);
+    } else {
+      alert(`${successCount}枚の画像を削除しました。`);
+    }
+
+    // Check for empty batches
+    imagesToDelete.forEach(({ batchId }) => {
+      const container = document.getElementById(`images-${batchId}`);
+      if (container) {
+        const remainingImages = container.querySelectorAll('.image-card');
+        if (remainingImages.length === 0) {
+          container.innerHTML = '<div class="p-8 text-center"><p class="text-gray-500">このバッチの画像は全て削除されました</p></div>';
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Bulk delete error:', error);
+    alert('一括削除に失敗しました: ' + error.message);
+  } finally {
+    deleteSelectedBtn.disabled = false;
+    deleteSelectedBtn.innerHTML = `
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+      </svg>
+      一括削除
+    `;
+  }
+});
+
+/**
+ * Bulk ZIP download selected images
+ */
+downloadSelectedBtn.addEventListener('click', async () => {
+  let totalCount = 0;
+  selectedImages.forEach(batch => {
+    totalCount += batch.size;
+  });
+
+  if (totalCount === 0) {
+    alert('画像が選択されていません。');
+    return;
+  }
+
+  try {
+    downloadSelectedBtn.disabled = true;
+    downloadSelectedBtn.textContent = 'ダウンロード中...';
+    zipProgress.classList.remove('hidden');
+
+    // Create ZIP file
+    const zip = new JSZip();
+    const imagePromises = [];
+    const imageList = [];
+
+    selectedImages.forEach((batchImages) => {
+      batchImages.forEach((imageData) => {
+        imageList.push(imageData);
+      });
+    });
+
+    zipProgressText.textContent = `画像をダウンロード中... (0/${totalCount})`;
+    zipProgressBar.style.width = '0%';
+    zipProgressPercent.textContent = '0%';
+
+    // Download all images
+    let completed = 0;
+    for (const imageData of imageList) {
+      try {
+        const response = await fetch(imageData.url);
+        const blob = await response.blob();
+        zip.file(imageData.filename, blob);
+
+        completed++;
+        const percent = Math.round((completed / totalCount) * 100);
+        zipProgressBar.style.width = `${percent}%`;
+        zipProgressPercent.textContent = `${percent}%`;
+        zipProgressText.textContent = `画像をダウンロード中... (${completed}/${totalCount})`;
+      } catch (error) {
+        console.error(`Failed to download ${imageData.filename}:`, error);
+      }
+    }
+
+    // Generate ZIP
+    zipProgressText.textContent = 'ZIPファイルを生成中...';
+    const zipBlob = await zip.generateAsync({ type: 'blob' }, (metadata) => {
+      const percent = Math.round(metadata.percent);
+      zipProgressBar.style.width = `${percent}%`;
+      zipProgressPercent.textContent = `${percent}%`;
+    });
+
+    // Download ZIP
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const filename = `imgstk-${timestamp}.zip`;
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(zipBlob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+
+    zipProgressText.textContent = 'ダウンロード完了！';
+    setTimeout(() => {
+      zipProgress.classList.add('hidden');
+    }, 2000);
+
+  } catch (error) {
+    console.error('ZIP download error:', error);
+    alert('ZIPダウンロードに失敗しました: ' + error.message);
+    zipProgress.classList.add('hidden');
+  } finally {
+    downloadSelectedBtn.disabled = false;
+    downloadSelectedBtn.innerHTML = `
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+      </svg>
+      ZIPダウンロード
+    `;
+  }
+});
