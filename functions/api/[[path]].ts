@@ -177,6 +177,7 @@ app.post('/upload', async (c) => {
     console.error('Upload error:', error);
     return c.json({ error: 'Upload failed', details: String(error) }, 500);
   }
+});
 
 /**
  * GET /api/batches
@@ -196,6 +197,7 @@ app.get('/batches', async (c) => {
     console.error('List batches error:', error);
     return c.json({ error: 'Failed to list batches' }, 500);
   }
+});
 
 /**
  * GET /api/batches/:id
@@ -220,6 +222,7 @@ app.get('/batches/:id', async (c) => {
     console.error('Get batch error:', error);
     return c.json({ error: 'Failed to get batch' }, 500);
   }
+});
 
 /**
  * DELETE /api/batches/:id
@@ -251,6 +254,7 @@ app.delete('/batches/:id', async (c) => {
     console.error('Delete batch error:', error);
     return c.json({ error: 'Failed to delete batch' }, 500);
   }
+});
 
 /**
  * POST /api/batches/:id/markdown
