@@ -8,7 +8,7 @@ import { handle } from 'hono/cloudflare-pages';
 // import { cors } from 'hono/cors'; // Disabled for Cloudflare Pages compatibility
 import type { Env, UploadRequest, Batch, Image } from '../types';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env }>().basePath('/api');
 
 // CORS middleware - Disabled for now, Basic Auth handles security
 // app.use('/*', cors({
