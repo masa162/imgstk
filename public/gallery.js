@@ -26,7 +26,7 @@ async function loadBatches() {
     emptyState.classList.add('hidden');
     errorDiv.classList.add('hidden');
 
-    const response = await fetch(`${API_BASE}/batches`);
+    const response = await fetch(`${API_BASE}/batches`, { credentials: 'include' });
 
     if (!response.ok) {
       throw new Error('バッチの読み込みに失敗しました');
@@ -126,7 +126,7 @@ function renderBatches(batches) {
 async function generateMarkdown(batchId) {
   try {
     const response = await fetch(`${API_BASE}/batches/${batchId}/markdown`, {
-      method: 'POST',
+      credentials: 'include', method: 'POST',
     });
 
     if (!response.ok) {
@@ -150,7 +150,7 @@ async function deleteBatch(batchId, batchTitle) {
 
   try {
     const response = await fetch(`${API_BASE}/batches/${batchId}`, {
-      method: 'DELETE',
+      credentials: 'include', method: 'DELETE',
     });
 
     if (!response.ok) {

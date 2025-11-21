@@ -129,9 +129,10 @@ uploadBtn.addEventListener('click', async () => {
     progressBar.style.width = '0%';
 
     // Upload to API
+    // Upload to API
     const response = await fetch(`${API_BASE}/upload`, {
       method: 'POST',
-      headers: {
+      credentials: 'include', // Include Basic Auth credentials
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
