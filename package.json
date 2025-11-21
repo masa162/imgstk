@@ -1,0 +1,37 @@
+{
+  "name": "imgstk",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev:worker": "wrangler dev worker/src/index.ts",
+    "deploy:worker": "wrangler deploy --config worker/wrangler.toml",
+    "dev:pages": "wrangler pages dev public --compatibility-date=2024-11-21",
+    "deploy:pages": "wrangler pages deploy public --project-name=imgstk-pages",
+    "db:migrate": "wrangler d1 execute imgstk-db --remote --file=db/migrations/0001_init.sql",
+    "db:query": "wrangler d1 execute imgstk-db --remote --command",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/masa162/imgstk.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/masa162/imgstk/issues"
+  },
+  "homepage": "https://github.com/masa162/imgstk#readme",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251121.0",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.50.0"
+  },
+  "dependencies": {
+    "hono": "^4.10.6"
+  }
+}

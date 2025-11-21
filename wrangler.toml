@@ -1,0 +1,17 @@
+name = "imgstk-pages"
+compatibility_date = "2024-11-21"
+pages_build_output_dir = "public"
+account_id = "c677241d7d66ff80103bab9f142128ab"
+
+[vars]
+BASIC_AUTH_USER = "mn"
+BASIC_AUTH_PASS = "39"
+
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "imgstk-bucket"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "imgstk-db"
+database_id = "56b82fb3-9ec3-4c3e-917c-23e2da347682"

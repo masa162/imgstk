@@ -1,0 +1,11 @@
+name = "imgstk-worker"
+main = "src/index.ts"
+compatibility_date = "2024-11-21"
+account_id = "c677241d7d66ff80103bab9f142128ab"
+
+[vars]
+ALLOWED_ORIGINS = "https://admin-stk.be2nd.com"
+
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "imgstk-bucket"
