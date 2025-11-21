@@ -1,6 +1,6 @@
 /**
  * Middleware for Cloudflare Pages Functions
- * Handles Basic Authentication for API routes
+ * Handles Basic Authentication for all routes
  */
 
 import type { PagesFunction, EventContext } from '@cloudflare/workers-types';
@@ -11,19 +11,26 @@ const basicAuth: PagesFunction<Env> = async (context) => {
   const { request, env, next } = context;
   const url = new URL(request.url);
 
-  // Skip auth for non-API routes (static files)
-  if (!url.pathname.startsWith('/api/')) {
-    return next();
-  }
-
   // Check Basic Auth header
   const authHeader = request.headers.get('Authorization');
 
   if (!authHeader || !authHeader.startsWith('Basic ')) {
+    // For API routes, return JSON error
+    if (url.pathname.startsWith('/api/')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: {
+          'WWW-Authenticate': 'Basic realm="imgstk Admin"',
+          'Content-Type': 'application/json',
+        },
+      });
+    }
+    // For other routes (HTML), return standard 401
     return new Response('Unauthorized', {
       status: 401,
       headers: {
         'WWW-Authenticate': 'Basic realm="imgstk Admin"',
+        'Content-Type': 'text/html',
       },
     });
   }
@@ -35,10 +42,22 @@ const basicAuth: PagesFunction<Env> = async (context) => {
 
   // Verify credentials
   if (username !== env.BASIC_AUTH_USER || password !== env.BASIC_AUTH_PASS) {
+    // For API routes, return JSON error
+    if (url.pathname.startsWith('/api/')) {
+      return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
+        status: 401,
+        headers: {
+          'WWW-Authenticate': 'Basic realm="imgstk Admin"',
+          'Content-Type': 'application/json',
+        },
+      });
+    }
+    // For other routes (HTML), return standard 401
     return new Response('Unauthorized', {
       status: 401,
       headers: {
         'WWW-Authenticate': 'Basic realm="imgstk Admin"',
+        'Content-Type': 'text/html',
       },
     });
   }
