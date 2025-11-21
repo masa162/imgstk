@@ -176,7 +176,7 @@ app.post('/upload', async (c) => {
 
   } catch (error) {
     console.error('Upload error:', error);
-    return c.json({ error: 'Upload failed', details: String(error) }, 500);
+    return c.json({ error: 'Upload failed' }, 500);
   }
 });
 
@@ -323,7 +323,7 @@ app.delete('/images/:filename', async (c) => {
 
   } catch (error) {
     console.error('Delete image error:', error);
-    return c.json({ error: 'Failed to delete image', details: String(error) }, 500);
+    return c.json({ error: 'Failed to delete image' }, 500);
   }
 });
 

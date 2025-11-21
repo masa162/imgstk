@@ -76,8 +76,8 @@ Cloudflare Dashboardで設定が必要です（Wrangler CLIでは一部設定で
 
 | Variable | Value |
 |----------|-------|
-| BASIC_AUTH_USER | mn |
-| BASIC_AUTH_PASS | 39 |
+| BASIC_AUTH_USER | your_username |
+| BASIC_AUTH_PASS | your_secure_password |
 
 3. Settings → Functions → R2 bucket bindings を追加:
 
@@ -119,16 +119,15 @@ curl https://stk.be2nd.com/00000001.webp
 https://admin-stk.be2nd.com
 ```
 
-Basic認証が表示されるはずです:
-- Username: `mn`
-- Password: `39`
+Basic認証が表示されるはずです（設定した認証情報を入力）。
 
 ログイン後、アップロード画面が表示されればOK！
 
 ### 4.3 API動作確認
 
 ```bash
-curl -u mn:39 https://admin-stk.be2nd.com/api/health
+# 設定した認証情報を使用
+curl -u your_username:your_password https://admin-stk.be2nd.com/api/health
 ```
 
 レスポンス:
@@ -141,7 +140,7 @@ curl -u mn:39 https://admin-stk.be2nd.com/api/health
 ### 5.1 テスト画像のアップロード
 
 1. `https://admin-stk.be2nd.com` にアクセス
-2. Basic認証でログイン (mn / 39)
+2. Basic認証でログイン（設定した認証情報を入力）
 3. バッチタイトル: "Test Upload 2025-11-21"
 4. 2〜3枚の画像をドラッグ&ドロップ
 5. 「アップロード開始」をクリック

@@ -103,8 +103,8 @@ compatibility_date = "2024-11-21"
 pages_build_output_dir = "public"
 
 [vars]
-BASIC_AUTH_USER = "mn"
-BASIC_AUTH_PASS = "39"
+BASIC_AUTH_USER = "your_username_here"
+BASIC_AUTH_PASS = "your_secure_password_here"
 
 [[r2_buckets]]
 binding = "R2_BUCKET"
@@ -203,7 +203,7 @@ Example output:
 
 ### Admin Endpoints (Pages Functions)
 
-All require Basic Authentication (`mn:39`)
+All require Basic Authentication (configured via Cloudflare Dashboard environment variables)
 
 - `POST /api/upload` - Bulk upload images
 - `GET /api/batches` - List all batches
@@ -256,9 +256,18 @@ Based on Cloudflare pricing (as of 2024):
 
 ## Security
 
-- **Basic Authentication**: Username `mn`, Password `39`
+⚠️ **IMPORTANT**: After deployment, immediately configure secure credentials via Cloudflare Dashboard:
+1. Go to **Workers & Pages** → **imgstk-pages** → **Settings** → **Environment variables**
+2. Set `BASIC_AUTH_USER` and `BASIC_AUTH_PASS` to strong, unique values
+3. Configure for both **Production** and **Preview** environments
+4. **Never use default or example credentials in production**
+
+Security features:
+- **Basic Authentication**: Required for all admin operations
 - **CORS**: Restricted to `be2nd.com` domains
-- **R2 Access**: Private, only via Worker/Functions
+- **R2 Access**: Private, only accessible via Worker/Functions
+- **Input Validation**: Strict filename patterns and file type checking
+- **SQL Injection Protection**: Parameterized queries only
 
 ## Roadmap
 
