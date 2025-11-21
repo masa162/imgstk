@@ -282,6 +282,7 @@ app.post('/batches/:id/markdown', async (c) => {
     console.error('Generate markdown error:', error);
     return c.json({ error: 'Failed to generate markdown' }, 500);
   }
+});
 
 // Export handler for Pages Functions
 export const onRequest = app.fetch;
