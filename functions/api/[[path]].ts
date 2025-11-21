@@ -4,17 +4,17 @@
  */
 
 import { Hono } from 'hono';
-import { cors } from 'hono/cors';
+// import { cors } from 'hono/cors'; // Disabled for Cloudflare Pages compatibility
 import type { Env, UploadRequest, Batch, Image } from '../types';
 
 const app = new Hono<{ Bindings: Env }>();
 
-// CORS middleware
-app.use('/*', cors({
-  origin: ['https://admin-stk.be2nd.com', 'http://localhost:8788'],
-  allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
-}));
+// CORS middleware - Disabled for now, Basic Auth handles security
+// app.use('/*', cors({
+//   origin: ['https://admin-stk.be2nd.com', 'http://localhost:8788'],
+//   allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+//   allowHeaders: ['Content-Type', 'Authorization'],
+// }));
 
 // Health check
 app.get('/health', (c) => {
