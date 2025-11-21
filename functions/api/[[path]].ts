@@ -19,6 +19,27 @@ app.use('/*', cors({
 // Health check
 app.get('/health', (c) => {
   return c.json({ status: 'ok', service: 'imgstk-api' });
+
+// Diagnostic endpoint
+app.get('/debug', (c) => {
+  const hasDB = !!c.env.DB;
+  const hasR2 = !!c.env.R2_BUCKET;
+  const hasAuthUser = !!c.env.BASIC_AUTH_USER;
+  const hasAuthPass = !!c.env.BASIC_AUTH_PASS;
+
+  return c.json({
+    bindings: {
+      DB: hasDB ? 'configured' : 'MISSING',
+      R2_BUCKET: hasR2 ? 'configured' : 'MISSING',
+    },
+    env: {
+      BASIC_AUTH_USER: hasAuthUser ? 'configured' : 'MISSING',
+      BASIC_AUTH_PASS: hasAuthPass ? 'configured' : 'MISSING',
+    },
+    timestamp: new Date().toISOString(),
+  });
+});
+
 });
 
 /**
