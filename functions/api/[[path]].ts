@@ -4,6 +4,7 @@
  */
 
 import { Hono } from 'hono';
+import { handle } from 'hono/cloudflare-pages';
 // import { cors } from 'hono/cors'; // Disabled for Cloudflare Pages compatibility
 import type { Env, UploadRequest, Batch, Image } from '../types';
 
@@ -289,4 +290,5 @@ app.post('/batches/:id/markdown', async (c) => {
 });
 
 // Export handler for Pages Functions
-export const onRequest = app.fetch;
+// Using handle() adapter to bridge Hono and Cloudflare Pages Function signatures
+export const onRequest = handle(app);
