@@ -126,7 +126,8 @@ function renderBatches(batches) {
 async function generateMarkdown(batchId) {
   try {
     const response = await fetch(`${API_BASE}/batches/${batchId}/markdown`, {
-      credentials: 'include', method: 'POST',
+      credentials: 'include',
+      method: 'POST',
     });
 
     if (!response.ok) {
@@ -150,7 +151,8 @@ async function deleteBatch(batchId, batchTitle) {
 
   try {
     const response = await fetch(`${API_BASE}/batches/${batchId}`, {
-      credentials: 'include', method: 'DELETE',
+      credentials: 'include',
+      method: 'DELETE',
     });
 
     if (!response.ok) {
