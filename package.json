@@ -13,7 +13,8 @@
     "deploy:pages": "wrangler pages deploy public --project-name=imgstk-pages",
     "db:migrate": "wrangler d1 execute imgstk-db --remote --file=db/migrations/0001_init.sql",
     "db:query": "wrangler d1 execute imgstk-db --remote --command",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npm install --prefix functions"
   },
   "repository": {
     "type": "git",
