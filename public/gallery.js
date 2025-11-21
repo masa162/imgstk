@@ -47,8 +47,21 @@ const closeModal = document.getElementById('closeModal');
 const closeModalBtn = document.getElementById('closeModalBtn');
 const copyMarkdown = document.getElementById('copyMarkdown');
 
+// Filter elements
+const searchInput = document.getElementById('searchInput');
+const dateFrom = document.getElementById('dateFrom');
+const dateTo = document.getElementById('dateTo');
+const clearFiltersBtn = document.getElementById('clearFilters');
+const resultCount = document.getElementById('resultCount');
+
+// Debounce timer
+let debounceTimer = null;
+
 // Load batches on page load
-window.addEventListener('DOMContentLoaded', loadBatches);
+window.addEventListener('DOMContentLoaded', () => {
+  loadBatches();
+  setupFilters();
+});
 
 async function loadBatches() {
   try {
@@ -57,7 +70,16 @@ async function loadBatches() {
     emptyState.classList.add('hidden');
     errorDiv.classList.add('hidden');
 
-    const response = await fetch(`${API_BASE}/batches`, { credentials: 'include' });
+    // Build query string with filters
+    const params = new URLSearchParams();
+    if (searchInput.value) params.append('search', searchInput.value);
+    if (dateFrom.value) params.append('from', dateFrom.value);
+    if (dateTo.value) params.append('to', dateTo.value);
+
+    const queryString = params.toString();
+    const url = queryString ? `${API_BASE}/batches?${queryString}` : `${API_BASE}/batches`;
+
+    const response = await fetch(url, { credentials: 'include' });
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -68,6 +90,9 @@ async function loadBatches() {
     const batches = data.batches;
 
     loading.classList.add('hidden');
+
+    // Update result count
+    resultCount.textContent = data.count || batches.length;
 
     if (batches.length === 0) {
       emptyState.classList.remove('hidden');
@@ -447,4 +472,34 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+/**
+ * Setup filter event listeners
+ */
+function setupFilters() {
+  // Debounced search input (300ms delay)
+  searchInput.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      loadBatches();
+    }, 300);
+  });
+
+  // Date filters (immediate)
+  dateFrom.addEventListener('change', () => {
+    loadBatches();
+  });
+
+  dateTo.addEventListener('change', () => {
+    loadBatches();
+  });
+
+  // Clear filters button
+  clearFiltersBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    dateFrom.value = '';
+    dateTo.value = '';
+    loadBatches();
+  });
 }

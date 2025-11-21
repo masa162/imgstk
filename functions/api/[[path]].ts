@@ -203,17 +203,50 @@ app.post('/upload', async (c) => {
 
 /**
  * GET /api/batches
- * List all batches
+ * List all batches with optional filters
+ * Query params: search (title), from (date), to (date)
  */
 app.get('/batches', async (c) => {
   try {
     const db = c.env.DB;
 
-    const result = await db.prepare(`
-      SELECT * FROM batch_summary ORDER BY uploaded_at DESC
-    `).all();
+    // Get query parameters
+    const search = c.req.query('search') || '';
+    const dateFrom = c.req.query('from') || '';
+    const dateTo = c.req.query('to') || '';
 
-    return c.json({ batches: result.results });
+    // Build dynamic SQL query
+    let sql = 'SELECT * FROM batch_summary WHERE 1=1';
+    const params: any[] = [];
+
+    // Add search filter (case-insensitive title search)
+    if (search) {
+      sql += ' AND title LIKE ?';
+      params.push(`%${search}%`);
+    }
+
+    // Add date range filters
+    if (dateFrom) {
+      sql += ' AND DATE(uploaded_at) >= ?';
+      params.push(dateFrom);
+    }
+
+    if (dateTo) {
+      sql += ' AND DATE(uploaded_at) <= ?';
+      params.push(dateTo);
+    }
+
+    // Order by upload date (newest first)
+    sql += ' ORDER BY uploaded_at DESC';
+
+    // Execute query
+    const result = await db.prepare(sql).bind(...params).all();
+
+    return c.json({
+      batches: result.results,
+      count: result.results.length,
+      filters: { search, dateFrom, dateTo }
+    });
 
   } catch (error) {
     console.error('List batches error:', error);
