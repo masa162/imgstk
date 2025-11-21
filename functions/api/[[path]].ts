@@ -105,16 +105,22 @@ app.post('/upload', async (c) => {
     const firstId = await getNextSequence(db, files.length);
     const lastId = firstId + files.length - 1;
 
-    // Create batch record
+    // Prepare batch record
     const batchId = generateUUID();
     const now = new Date().toISOString();
 
-    await db.prepare(`
-      INSERT INTO batches (id, title, uploaded_at, image_count, first_id, last_id, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).bind(batchId, batchTitle, now, files.length, firstId, lastId, now).run();
+    // Prepare all database statements for batch execution
+    const statements: D1PreparedStatement[] = [];
 
-    // Upload files and create image records
+    // 1. Add batch INSERT statement
+    statements.push(
+      db.prepare(`
+        INSERT INTO batches (id, title, uploaded_at, image_count, first_id, last_id, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).bind(batchId, batchTitle, now, files.length, firstId, lastId, now)
+    );
+
+    // Process files and prepare statements
     const images: Image[] = [];
     const uploadPromises = [];
 
@@ -144,11 +150,13 @@ app.post('/upload', async (c) => {
         })
       );
 
-      // Insert image record
-      await db.prepare(`
-        INSERT INTO images (id, batch_id, filename, url, original_filename, bytes, mime, uploaded_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(imageId, batchId, filename, url, file.name, file.size, file.type, now).run();
+      // 2. Add image INSERT statement to batch
+      statements.push(
+        db.prepare(`
+          INSERT INTO images (id, batch_id, filename, url, original_filename, bytes, mime, uploaded_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(imageId, batchId, filename, url, file.name, file.size, file.type, now)
+      );
 
       images.push({
         id: imageId,
@@ -160,6 +168,15 @@ app.post('/upload', async (c) => {
         mime: file.type,
         uploaded_at: now,
       });
+    }
+
+    // Execute all database operations in a single atomic batch
+    // This reduces 501 operations to just 1 batch operation!
+    const batchResults = await db.batch(statements);
+
+    // Check if batch operation succeeded
+    if (!batchResults || batchResults.length === 0) {
+      throw new Error('Batch database operation failed');
     }
 
     // Wait for all R2 uploads
